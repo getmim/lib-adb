@@ -2,7 +2,7 @@
 /**
  * Adb
  * @package lib-adb
- * @version 0.0.1
+ * @version 0.1.0
  */
 
 namespace LibAdb\Library;
@@ -15,6 +15,7 @@ class Adb
         $command = $bin . ' ' . $command;
         return `$command`;
     }
+
     public static function devices(bool $long = false): array
     {
         $cmd = 'devices';
@@ -62,12 +63,18 @@ class Adb
         $result = [];
         foreach ($opts as $opt) {
             $res = self::exec($cmd . $opt);
-            if (false !== strstr($res, 'not found')) {
+            if (!$res || false !== strstr($res, 'not found')) {
                 throw new \Exception('Device not connected');
             }
             $result[] = trim($res);
         }
 
         return implode(' ', $result);
+    }
+
+    public static function pair(string $address, string $code)
+    {
+        $result = self::exec('pair ' . $address . ' ' . $code);
+        return $result;
     }
 }
