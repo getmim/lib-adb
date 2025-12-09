@@ -22,7 +22,8 @@ return [
 
 ### LibAdb\Library\Adb
 
-1. `:exec(string $command): ?string`
-2. `:devices(bool $long = false): array`
-3. `:getName(string $id): ?string`
-3. `:pair(string $address, string $code): ?string`
+1. `->construct(string $port = '5037')`
+1. `->exec(string $command): ?string`
+2. `->devices(bool $long = false): array`
+3. `->getName(string $id): ?string`
+3. `->pair(string $address, string $code): ?string`
