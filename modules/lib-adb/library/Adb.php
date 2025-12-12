@@ -14,12 +14,30 @@ class Adb
     public function __construct(string $port = '5037')
     {
         $this->port = $port;
+        $bin = \Mim::$app->config->libAdb->bin;
+        $started = `lsof -Pi :$port -sTCP:LISTEN`;
+        if ($started) {
+            $features = `$bin -P$port host-features`;
+            $features = explode(',', $features);
+            if (!in_array('libusb', $features)) {
+                $started = false;
+                `$bin -P$port kill-server`;
+            }
+        }
+
+        `ADB_LIBUSB=1 $bin -P$port start-server`;
     }
 
     public function connect(string $address): ?string
     {
         $result = $this->exec('connect ' . $address);
         return $result;
+    }
+
+    public function detach(string $id): void
+    {
+        $cmd = '-s ' . $id . ' detach';
+        $this->exec($cmd);
     }
 
     public function exec(string $command): ?string
@@ -96,5 +114,20 @@ class Adb
     {
         $result = $this->exec('pair ' . $address . ' ' . $code);
         return $result;
+    }
+
+    public function single(string $id): void
+    {
+        $cmd = [
+            '--one-device',
+            $id,
+            'start-server'
+        ];
+        $this->exec(implode(' ', $cmd));
+    }
+
+    public function stop(): void
+    {
+        $this->exec('kill-server');
     }
 }
