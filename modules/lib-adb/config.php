@@ -34,6 +34,12 @@ return [
                     'name' => 'bin',
                     'question' => 'ADB binary path file',
                     'rule' => '!^.+$!'
+                ],
+                [
+                    'name' => 'log',
+                    'question' => 'Log all adb command',
+                    'rule' => 'boolean',
+                    'default' => true
                 ]
             ]
         ]

@@ -7,16 +7,50 @@
 
 namespace LibAdb\Library;
 
+use Mim\Library\Fs;
+use Cli\Library\Bash;
+
 class Adb
 {
+    protected bool $is_cli = false;
     protected string $port = '5037';
     protected string $bin = '';
     protected string $last_error = '';
+    protected $logger = null;
+
+    protected function echo(string $text)
+    {
+        if (!$this->is_cli) {
+            return;
+        }
+
+        $tx = '    ';
+        $tx .= $text;
+        Bash::echo($tx);
+    }
+
+    protected function defineLogger()
+    {
+        $log = \Mim::$app->config->libAdb->log ?? false;
+        if (!$log) {
+            return;
+        }
+
+        $base = BASEPATH . '/etc/log/lib-adb/';
+        $path = date('Y/m/d/H/i/s/');
+        $basepath = $base . $path;
+        $basefile = $basepath . '/' . uniqid() . '.txt';
+
+        Fs::mkdir($basepath);
+        $this->logger = fopen($basefile, 'w');
+    }
 
     public function __construct(string $port = '5037')
     {
+        $this->is_cli = php_sapi_name() === 'cli';
         $this->port = $port;
         $this->bin = \Mim::$app->config->libAdb->bin;
+        $this->defineLogger();
     }
 
     public function exec(string $command): ?string
@@ -29,7 +63,28 @@ class Adb
 
         $command = implode(' ', $cmd);
 
-        return `$command`;
+        if ($this->logger) {
+            fwrite($this->logger, date('Y-m-d H:i') . PHP_EOL);
+            fwrite($this->logger, $command . PHP_EOL);
+        }
+
+        $this->echo($command);
+
+        $result = `$command`;
+
+        if ($this->logger) {
+            if (is_null($result)) {
+                $res = 'NULL';
+            } else {
+                $res = substr($result, 0, 100);
+            }
+
+            $res .= PHP_EOL;
+            fwrite($this->logger, $res);
+            fwrite($this->logger, str_repeat('-', 80) . PHP_EOL);
+        }
+
+        return $result;
     }
 
     public function devices(): array
@@ -69,88 +124,4 @@ class Adb
 
         return $result;
     }
-
-    // protected string $port = '5037';
-    // protected string $last_error = '';
-
-    // protected function setError(string $message)
-    // {
-    //     $this->last_error = $message;
-    //     return null;
-    // }
-
-    // public function attach(string $id): void
-    // {
-    //     $cmd = '-s ' . $id . ' attach';
-    //     $this->exec($cmd);
-    // }
-
-    // public function connect(string $address): ?string
-    // {
-    //     $result = $this->exec('connect ' . $address);
-    //     return $result;
-    // }
-
-    // public function detach(string $id): void
-    // {
-    //     $cmd = '-s ' . $id . ' detach';
-    //     $this->exec($cmd);
-    // }
-
-
-
-
-
-    // public function getName(string $id): ?string
-    // {
-    //     $opts = ['ro.product.manufacturer', 'ro.product.name'];
-    //     $cmd = '-s ' . $id . ' shell getprop ';
-    //     $result = [];
-    //     foreach ($opts as $opt) {
-    //         $res = $this->exec($cmd . $opt);
-    //         if (!$res) {
-    //             return $this->setError('Unknow Error');
-    //         } elseif (false !== strstr($res, 'not found')) {
-    //             return $this->setError('Device not connected');
-    //         } elseif (false !== strstr($res, 'unauthorized')) {
-    //             return $this->setError('ADB Unauthorized');
-    //         }
-
-    //         $result[] = trim($res);
-    //     }
-
-    //     return implode(' ', $result);
-    // }
-
-    // public function pair(string $address, string $code)
-    // {
-    //     $result = $this->exec('pair ' . $address . ' ' . $code);
-    //     return $result;
-    // }
-
-    // public function screenshot(string $id, string $target): void
-    // {
-    //     $cmd = '-s ' . $id . ' exec-out screencap -p > ' . $target;
-    //     $this->exec($cmd);
-    // }
-
-    // public function single(string $id): void
-    // {
-    //     $cmd = [
-    //         '--one-device',
-    //         $id,
-    //         'start-server'
-    //     ];
-    //     $this->exec(implode(' ', $cmd));
-    // }
-
-    // public function stop(): void
-    // {
-    //     $this->exec('kill-server');
-    // }
-
-    // public function lastError()
-    // {
-    //     return $this->last_error;
-    // }
 }

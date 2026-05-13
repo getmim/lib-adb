@@ -23,11 +23,15 @@ class Device
         $cmd = 'shell "dumpsys activity activities | grep -E \'mCurrentFocus|mFocusedApp\'"';
         $result = $this->exec($cmd);
 
+        if (!$result) {
+            return null;
+        }
+
         if (!preg_match('!(\w+\.[\w\.]+\/[^ ]+)!', $result, $m)) {
             return null;
         }
 
-        return $m[0];
+        return trim($m[0]);
     }
 
     public function back(): void
@@ -69,6 +73,26 @@ class Device
         $this->exec($cmd);
     }
 
+    public function input(string $text): void
+    {
+        $text = str_replace(' ', '%s', $text);
+        $cmd = 'shell input text "' . $text . '"';
+        $this->exec($cmd);
+    }
+
+    public function installed(string $id): bool
+    {
+        $cmd = 'shell pm path ' . $id;
+        $result = $this->exec($cmd);
+        return $result ? true : false;
+    }
+
+    public function open(string $id): void
+    {
+        $cmd = 'shell monkey -p ' . $id . ' 1';
+        $this->exec($cmd);
+    }
+
     public function power(): void
     {
         $cmd = 'shell input keyevent KEYCODE_POWER';
@@ -97,8 +121,17 @@ class Device
     {
         $cmd = 'exec-out uiautomator dump /dev/tty';
         $result = $this->exec($cmd);
+        if (!$result) {
+            return null;
+        }
         $result = str_replace('UI hierchary dumped to: /dev/tty', '', $result);
         return $result;
+    }
+
+    public function type(int $code)
+    {
+        $cmd = 'shell input keyevent ' . $code;
+        $this->exec($cmd);
     }
 
     public function swipe(array $from, array $to, int $time)
